@@ -1,0 +1,29 @@
+pipeline {
+    agent { label 'build' }
+    stages {
+        stage('vcs') {
+            steps {
+                git branch: 'develop',
+                    url: ''
+            }
+        }
+        stage('build and package') {
+            steps {
+                sh 'mvn clean package'
+            }
+        }
+        stage('scans') {
+            steps {
+                sh 'Software Component Analysis'
+                sh 'Static Code Analysis'
+                sh 'quality gate'
+            }
+        }
+    }
+    post {
+        failed {
+            # send mail to author in to and rest in CC
+        }
+    }
+
+}

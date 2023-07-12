@@ -1,0 +1,86 @@
+pipeline {
+    agent { label 'build' }
+    stages {
+        stage('vcs') {
+            steps {
+                git branch: 'develop',
+                    url: ''
+            }
+        }
+        stage('build and package') {
+            steps {
+                sh 'mvn clean package'
+            }
+        }
+        stage('scans') {
+            steps {
+                sh 'Software Component Analysis'
+                sh 'Static Code Analysis'
+                sh 'quality gate'
+            }
+        }
+        stage('artifactory') {
+            steps {
+                sh 'push to jfrog'
+            }
+        }
+        stage('deploy to System Test Env') {
+            agent { label 'terraform' }
+            steps {
+                sh 'terraform apply'
+                sh 'ansible-playbook' # virtual machines
+                or
+                sh 'kubectl apply -f <>' # container
+
+            }
+        }
+        stage ('test System Test Env') {
+            agent { label 'selenium test' }
+            steps {
+                sh 'selenium tests and publish results'
+
+            }
+        }
+        stage('deploy to Performance Test Env') {
+            agent { label 'terraform' }
+            steps {
+                sh 'terraform apply'
+                sh 'ansible-playbook' # virtual machines
+                or
+                sh 'kubectl apply -f <>' # container
+
+            }
+        }
+        stage ('test Performance Test Env') {
+            agent { label 'performance test' }
+            steps {
+                sh 'jmeter tests and publish results'
+
+            }
+        }
+        stage('deploy to Security Test Env') {
+            agent { label 'terraform' }
+            steps {
+                sh 'terraform apply'
+                sh 'ansible-playbook' # virtual machines
+                or
+                sh 'kubectl apply -f <>' # container
+
+            }
+        }
+        stage ('test Security Test Env') {
+            agent { label 'security test' }
+            steps {
+                sh 'burpsuite tests and publish results'
+
+            }
+        }
+
+    }
+    post {
+        failed {
+            # send mail to author in to and rest in CC
+        }
+    }
+
+}
